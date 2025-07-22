@@ -2,7 +2,7 @@ export const runtime = 'edge';
 
 export async function POST(request: Request) {
   try {
-    // Validate request body
+    // Parse JSON body safely
     let body;
     try {
       body = await request.json();
@@ -14,6 +14,7 @@ export async function POST(request: Request) {
     }
 
     const { name, tone } = body;
+    // Validate inputs presence and type
     if (!name || !tone || typeof name !== 'string' || typeof tone !== 'string') {
       return new Response(
         JSON.stringify({ error: 'Missing or invalid name/tone in request body' }),
@@ -21,18 +22,20 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate API key
+    // Get API key and validate
     const apiKey = process.env.MISTRAL_API_KEY;
     if (!apiKey) {
       throw new Error('Mistral API key is not configured');
     }
 
-    // Sanitize inputs to prevent prompt injection (basic example)
+    // Basic sanitization to prevent prompt injection
     const sanitizedName = name.replace(/[^a-zA-Z0-9\s]/g, '');
     const sanitizedTone = tone.replace(/[^a-zA-Z0-9\s]/g, '');
 
+    // Compose prompt for Mistral
     const prompt = `Write a ${sanitizedTone} message to someone named ${sanitizedName}. Keep it under 3 sentences. Use poetic and romantic language.`;
 
+    // Call Mistral API
     const mistralRes = await fetch('https://api.mistral.ai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -50,13 +53,18 @@ export async function POST(request: Request) {
       throw new Error(`Mistral API error: ${mistralRes.status} ${mistralRes.statusText}`);
     }
 
+    // Parse response JSON
     const data = await mistralRes.json();
-    const message = data.choices?.[0]?.message?.content?.trim() || 'Could not generate message.';
 
+    // Validate response content
     if (!data.choices?.[0]?.message?.content) {
       throw new Error('Invalid response format from Mistral API');
     }
 
+    // Extract and trim message
+    const message = data.choices[0].message.content.trim();
+
+    // Return successful response
     return new Response(
       JSON.stringify({ message }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
