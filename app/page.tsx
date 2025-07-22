@@ -4,7 +4,6 @@ import { useState, useRef } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Heart, Download, Sparkles, Share2 } from "lucide-react";
 import html2canvas from 'html2canvas';
 
@@ -20,14 +19,19 @@ export default function FlirtyNote() {
   const generateMessage = async () => {
     setLoading(true);
     setMessage('');
-    const res = await fetch('/api/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, tone })
-    });
-    const data = await res.json();
-    setMessage(data.message);
-    setLoading(false);
+    try {
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, tone }),
+      });
+      const data = await res.json();
+      setMessage(data.message);
+    } catch (error) {
+      setMessage('Failed to generate message. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const downloadCard = async () => {
@@ -52,12 +56,12 @@ export default function FlirtyNote() {
           <Input
             placeholder="Your crush's name..."
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
           />
           <select
             className="w-full p-2 border rounded-md"
             value={tone}
-            onChange={(e) => setTone(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setTone(e.target.value)}
           >
             <option value="romantic">Romantic 💖</option>
             <option value="flirty">Flirty 😘</option>
@@ -68,7 +72,7 @@ export default function FlirtyNote() {
           <select
             className="w-full p-2 border rounded-md"
             value={font}
-            onChange={(e) => setFont(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFont(e.target.value)}
           >
             <option value="cursive">Cursive ✍️</option>
             <option value="serif">Serif 🖋️</option>
@@ -78,7 +82,7 @@ export default function FlirtyNote() {
           <select
             className="w-full p-2 border rounded-md"
             value={bg}
-            onChange={(e) => setBg(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setBg(e.target.value)}
           >
             <option value="bg-pink-50">Pink 🌸</option>
             <option value="bg-red-100">Red Rose 🌹</option>
@@ -92,8 +96,12 @@ export default function FlirtyNote() {
           </Button>
 
           {message && (
-            <div ref={cardRef} className={`${bg} p-4 rounded-lg border border-pink-300 text-center`}>
-              <p className={`font-[${font}] text-pink-600 text-lg leading-relaxed whitespace-pre-wrap`}>
+            <div
+              ref={cardRef}
+              className={`${bg} p-4 rounded-lg border border-pink-300 text-center`}
+              style={{ fontFamily: font }}
+            >
+              <p className="text-pink-600 text-lg leading-relaxed whitespace-pre-wrap">
                 {message}
               </p>
               <div className="mt-4">
