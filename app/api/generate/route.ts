@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 export async function POST(request: Request) {
   try {
     const { name, tone } = await request.json();
@@ -18,9 +20,7 @@ export async function POST(request: Request) {
     });
 
     if (!mistralRes.ok) {
-      const errorText = await mistralRes.text();
-      console.error('Mistral API error:', mistralRes.status, errorText);
-      throw new Error(`Mistral API error: ${mistralRes.status} - ${errorText}`);
+      throw new Error(`Mistral API error: ${mistralRes.statusText}`);
     }
 
     const data = await mistralRes.json();
@@ -30,11 +30,20 @@ export async function POST(request: Request) {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('API route error:', error);
-    return new Response(JSON.stringify({ error: error.message || 'Internal Server Error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+
+    const message =
+      error instanceof Error
+        ? error.message
+        : 'Internal Server Error';
+
+    return new Response(
+      JSON.stringify({ error: message }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
   }
 }
