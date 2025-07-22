@@ -1,42 +1,40 @@
-import { NextRequest, NextResponse } from 'next/server';
-
-const MISTRAL_API_URL = 'https://api.mistral.ai/v1/generate';  // example URL, replace if needed
-const MISTRAL_API_KEY = process.env.MISTRAL_API_KEY;
-
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
     const { name, tone } = await request.json();
 
-    // Compose your prompt for Mistral
-    const prompt = `Write a ${tone} love note to a person named ${name}.`;
+    const prompt = `Write a ${tone} message to someone named ${name}. Keep it under 3 sentences. Use poetic and romantic language.`;
 
-    const response = await fetch(MISTRAL_API_URL, {
+    const mistralRes = await fetch('https://api.mistral.ai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${MISTRAL_API_KEY}`
+        'Authorization': `Bearer ${process.env.MISTRAL_API_KEY}`,
       },
       body: JSON.stringify({
-        prompt: prompt,
-        max_tokens: 150,
-        temperature: 0.7,
+        model: 'mistral-small',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.9,
       }),
     });
 
-    if (!response.ok) {
-      const errorDetails = await response.text();
-      console.error('Mistral API error:', errorDetails);
-      return NextResponse.json({ message: 'Failed to generate message.' }, { status: 500 });
+    if (!mistralRes.ok) {
+      const errorText = await mistralRes.text();
+      console.error('Mistral API error:', mistralRes.status, errorText);
+      throw new Error(`Mistral API error: ${mistralRes.status} - ${errorText}`);
     }
 
-    const data = await response.json();
-    // Adjust this depending on Mistral’s actual response shape
-    const message = data.choices?.[0]?.text?.trim() || 'Sorry, no message generated.';
+    const data = await mistralRes.json();
+    const message = data.choices?.[0]?.message?.content?.trim() || 'Could not generate message.';
 
-    return NextResponse.json({ message });
-
+    return new Response(JSON.stringify({ message }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
   } catch (error) {
     console.error('API route error:', error);
-    return NextResponse.json({ message: 'Failed to generate message.' }, { status: 500 });
+    return new Response(JSON.stringify({ error: error.message || 'Internal Server Error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 }
