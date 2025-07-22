@@ -1,39 +1,34 @@
-export const runtime = 'edge';
+import { NextRequest, NextResponse } from 'next/server';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const { name, tone } = await request.json();
+    const { prompt } = await request.json();
 
-    const prompt = `Write a ${tone} message to someone named ${name}. Keep it under 3 sentences. Use poetic and romantic language.`;
-
-    const mistralRes = await fetch('https://api.mistral.ai/v1/chat/completions', {
+    // Replace this with your actual Mistral API call logic
+    const response = await fetch('https://api.mistral.ai/generate', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${process.env.MISTRAL_API_KEY}`,
       },
-      body: JSON.stringify({
-        model: 'mistral-small',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.9,
-      }),
+      body: JSON.stringify({ prompt }),
     });
 
-    if (!mistralRes.ok) {
-      throw new Error(`Mistral API error: ${mistralRes.statusText}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch from Mistral API');
     }
 
-    const data = await mistralRes.json();
-    const message = data.choices?.[0]?.message?.content?.trim() || 'Could not generate message.';
+    const data = await response.json();
 
-    return new Response(JSON.stringify({ message }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return NextResponse.json({ result: data.generated_text });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message || 'Internal Server Error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    const errMsg = error instanceof Error ? error.message : 'Internal Server Error';
+    return new NextResponse(
+      JSON.stringify({ error: errMsg }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
   }
 }
